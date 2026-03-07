@@ -1,0 +1,64 @@
+name: Verify Stats Cards
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Runs daily at 08:00 UTC to catch any prolonged outages
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: Verify GitHub stats card URLs
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+
+    steps:
+      - name: Check stats card
+        run: |
+          HTTP_CODE=$(curl -s -o /tmp/stats.svg -w "%{http_code}" \
+            "https://github-readme-stats.vercel.app/api?username=pentademic&show_icons=true&theme=tokyonight&hide_border=true&hide_rank=true&cache_seconds=86400")
+          echo "Stats card HTTP status: $HTTP_CODE"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Stats card returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+          if grep -qi "Error fetching resource\|Something went wrong" /tmp/stats.svg; then
+            echo "::error::Stats card SVG contains an error message:"
+            cat /tmp/stats.svg
+            exit 1
+          fi
+          echo "Stats card OK"
+
+      - name: Check top-langs card
+        run: |
+          HTTP_CODE=$(curl -s -o /tmp/langs.svg -w "%{http_code}" \
+            "https://github-readme-stats.vercel.app/api/top-langs/?username=pentademic&layout=compact&theme=tokyonight&hide_border=true&langs_count=8&cache_seconds=86400")
+          echo "Top-langs card HTTP status: $HTTP_CODE"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Top-langs card returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+          if grep -qi "Error fetching resource\|Something went wrong" /tmp/langs.svg; then
+            echo "::error::Top-langs card SVG contains an error message:"
+            cat /tmp/langs.svg
+            exit 1
+          fi
+          echo "Top-langs card OK"
+
+      - name: Check streak stats
+        run: |
+          HTTP_CODE=$(curl -s -o /tmp/streak.svg -w "%{http_code}" \
+            "https://streak-stats.demolab.com?user=pentademic&theme=tokyonight&hide_border=true&date_format=j%20M%5B%20Y%5D")
+          echo "Streak stats HTTP status: $HTTP_CODE"
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::Streak stats returned HTTP $HTTP_CODE"
+            exit 1
+          fi
+          echo "Streak stats OK"
