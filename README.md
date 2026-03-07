@@ -65,9 +65,9 @@
 
 <div align="center">
 
-<img height="160" src="https://github-readme-stats.vercel.app/api?username=pentademic&show_icons=true&theme=tokyonight&hide_border=true&count_private=true&include_all_commits=true" alt="GitHub statistics card showing repositories, commits, and contributions" />
+<img height="160" src="https://github-readme-stats.vercel.app/api?username=pentademic&show_icons=true&theme=tokyonight&hide_border=true&cache_seconds=86400" alt="GitHub statistics card showing repositories, commits, and contributions" />
 &nbsp;&nbsp;
-<img height="160" src="https://github-readme-stats.vercel.app/api/top-langs/?username=pentademic&layout=compact&theme=tokyonight&hide_border=true&langs_count=8" alt="Most used programming languages chart" />
+<img height="160" src="https://github-readme-stats.vercel.app/api/top-langs/?username=pentademic&layout=compact&theme=tokyonight&hide_border=true&langs_count=8&cache_seconds=86400" alt="Most used programming languages chart" />
 
 </div>
 
