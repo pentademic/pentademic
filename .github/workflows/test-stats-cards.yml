@@ -1,0 +1,88 @@
+name: Verify Stats Cards
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    # Runs daily at 08:00 UTC to catch any prolonged outages
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    name: Verify GitHub stats card URLs
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+
+    steps:
+      - name: Check stats card
+        run: |
+          # Retry up to 3 times with a 10-second delay between attempts.
+          # 5xx responses are transient server errors; only fail on 4xx (config)
+          # or on SVG content that contains a known application-level error message.
+          for attempt in 1 2 3; do
+            HTTP_CODE=$(curl -s -o /tmp/stats.svg -w "%{http_code}" \
+              "https://github-readme-stats.vercel.app/api?username=pentademic&show_icons=true&theme=tokyonight&hide_border=true&hide_rank=true&cache_seconds=86400")
+            echo "Stats card HTTP status (attempt $attempt): $HTTP_CODE"
+            if [ "$HTTP_CODE" = "200" ]; then
+              if grep -qi "Error fetching resource\|Something went wrong" /tmp/stats.svg; then
+                echo "::error::Stats card SVG contains an error message:"
+                cat /tmp/stats.svg
+                exit 1
+              fi
+              echo "Stats card OK"
+              break
+            elif [ "$HTTP_CODE" -ge 500 ] 2>/dev/null && [ "$attempt" -lt 3 ]; then
+              echo "::warning::Stats card returned HTTP $HTTP_CODE (server error), retrying in 10 s…"
+              sleep 10
+            else
+              echo "::error::Stats card returned HTTP $HTTP_CODE after $attempt attempt(s)"
+              exit 1
+            fi
+          done
+
+      - name: Check top-langs card
+        run: |
+          for attempt in 1 2 3; do
+            HTTP_CODE=$(curl -s -o /tmp/langs.svg -w "%{http_code}" \
+              "https://github-readme-stats.vercel.app/api/top-langs/?username=pentademic&layout=compact&theme=tokyonight&hide_border=true&langs_count=8&cache_seconds=86400")
+            echo "Top-langs card HTTP status (attempt $attempt): $HTTP_CODE"
+            if [ "$HTTP_CODE" = "200" ]; then
+              if grep -qi "Error fetching resource\|Something went wrong" /tmp/langs.svg; then
+                echo "::error::Top-langs card SVG contains an error message:"
+                cat /tmp/langs.svg
+                exit 1
+              fi
+              echo "Top-langs card OK"
+              break
+            elif [ "$HTTP_CODE" -ge 500 ] 2>/dev/null && [ "$attempt" -lt 3 ]; then
+              echo "::warning::Top-langs card returned HTTP $HTTP_CODE (server error), retrying in 10 s…"
+              sleep 10
+            else
+              echo "::error::Top-langs card returned HTTP $HTTP_CODE after $attempt attempt(s)"
+              exit 1
+            fi
+          done
+
+      - name: Check streak stats
+        run: |
+          for attempt in 1 2 3; do
+            HTTP_CODE=$(curl -s -o /tmp/streak.svg -w "%{http_code}" \
+              "https://streak-stats.demolab.com?user=pentademic&theme=tokyonight&hide_border=true&date_format=j%20M%5B%20Y%5D")
+            echo "Streak stats HTTP status (attempt $attempt): $HTTP_CODE"
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "Streak stats OK"
+              break
+            elif [ "$HTTP_CODE" -ge 500 ] 2>/dev/null && [ "$attempt" -lt 3 ]; then
+              echo "::warning::Streak stats returned HTTP $HTTP_CODE (server error), retrying in 10 s…"
+              sleep 10
+            else
+              echo "::error::Streak stats returned HTTP $HTTP_CODE after $attempt attempt(s)"
+              exit 1
+            fi
+          done
