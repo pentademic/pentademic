@@ -476,10 +476,115 @@
       margin-top: 2rem;
     }
 
-    .stats-cards img {
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
       border-radius: var(--radius);
-      max-width: 100%;
-      height: auto;
+      padding: 1.5rem 1.75rem;
+      min-width: 260px;
+      flex: 1;
+      max-width: 480px;
+      text-align: left;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+    }
+
+    .stat-card-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1.25rem;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+
+    .stat-card-icon { font-size: 1rem; }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.9rem 1.5rem;
+    }
+
+    .stat-item { display: flex; flex-direction: column; }
+
+    .stat-value {
+      font-family: var(--mono);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1.2;
+    }
+
+    .stat-label {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.15rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .lang-bar-container { margin-bottom: 0.65rem; }
+    .lang-bar-container:last-child { margin-bottom: 0; }
+
+    .lang-bar-header {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.3rem;
+    }
+
+    .lang-bar-name {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--text);
+    }
+
+    .lang-bar-pct {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+
+    .lang-bar-track {
+      height: 6px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .lang-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+    }
+
+    .stat-loading {
+      color: var(--muted);
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 1.5rem 0;
+      animation: stat-pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes stat-pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    .stat-error {
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-style: italic;
+      text-align: center;
+      padding: 1.5rem 0;
     }
 
     .stats-streak {
@@ -839,18 +944,27 @@
     </div>
 
     <div class="stats-cards reveal">
-      <img
-        src="https://github-readme-stats.vercel.app/api?username=pentademic&show_icons=true&theme=tokyonight&hide_border=true&hide_rank=true&cache_seconds=86400"
-        height="160"
-        alt="GitHub statistics card showing repositories, commits, and contributions"
-        loading="lazy"
-      />
-      <img
-        src="https://github-readme-stats.vercel.app/api/top-langs/?username=pentademic&layout=compact&theme=tokyonight&hide_border=true&langs_count=8&cache_seconds=86400"
-        height="160"
-        alt="Most used programming languages chart"
-        loading="lazy"
-      />
+      <!-- GitHub Stats Card (rendered via JS + GitHub REST API) -->
+      <div class="stat-card" id="gh-stats-card">
+        <div class="stat-card-header">
+          <span class="stat-card-icon">⚡</span>
+          <span>pentademic's GitHub Stats</span>
+        </div>
+        <div id="gh-stats-body">
+          <p class="stat-loading">Loading…</p>
+        </div>
+      </div>
+
+      <!-- Top Languages Card (rendered via JS + GitHub REST API) -->
+      <div class="stat-card" id="gh-langs-card">
+        <div class="stat-card-header">
+          <span class="stat-card-icon">💻</span>
+          <span>Most Used Languages</span>
+        </div>
+        <div id="gh-langs-body">
+          <p class="stat-loading">Loading…</p>
+        </div>
+      </div>
     </div>
 
     <div class="stats-streak reveal">
@@ -891,6 +1005,131 @@
   <footer>
     <p>Built with ❤️ by <span>Adam Berrada</span> · © 2025</p>
   </footer>
+
+  <!-- ╔══════════════════════════════════╗ -->
+  <!--  SCRIPT — GitHub stats cards      -->
+  <!-- ╚══════════════════════════════════╝ -->
+  <script>
+    (function () {
+      var GITHUB_USER = 'pentademic';
+
+      // Accent colours for language bars (index-based fallback)
+      var ACCENT_COLORS = [
+        '#38bdf8', '#818cf8', '#34d399', '#fb923c', '#a78bfa', '#f472b6',
+        '#60a5fa', '#fbbf24', '#86efac', '#f87171'
+      ];
+
+      // Well-known GitHub language colours
+      var LANG_COLORS = {
+        'Python':     '#3572A5',
+        'C':          '#555555',
+        'C++':        '#f34b7d',
+        'JavaScript': '#f1e05a',
+        'TypeScript': '#3178c6',
+        'HTML':       '#e34c26',
+        'CSS':        '#563d7c',
+        'Shell':      '#89e051',
+        'Rust':       '#dea584',
+        'Go':         '#00ADD8',
+        'Makefile':   '#427819',
+        'Assembly':   '#6E4C13',
+        'VHDL':       '#adb2cb',
+        'Java':       '#b07219',
+        'Kotlin':     '#A97BFF',
+        'Swift':      '#F05138'
+      };
+
+      function colorFor(lang, idx) {
+        return LANG_COLORS[lang] || ACCENT_COLORS[idx % ACCENT_COLORS.length];
+      }
+
+      function loadStats() {
+        var statsBody = document.getElementById('gh-stats-body');
+        var langsBody = document.getElementById('gh-langs-body');
+
+        Promise.all([
+          fetch('https://api.github.com/users/' + GITHUB_USER),
+          fetch('https://api.github.com/users/' + GITHUB_USER + '/repos?per_page=100&sort=updated') // covers up to 100 repos
+        ]).then(function (responses) {
+          if (!responses[0].ok || !responses[1].ok) {
+            throw new Error('GitHub API error');
+          }
+          return Promise.all([responses[0].json(), responses[1].json()]);
+        }).then(function (data) {
+          var user  = data[0];
+          var repos = data[1];
+
+          // ── Stats card ──────────────────────────────────
+          var totalStars = repos.reduce(function (s, r) { return s + r.stargazers_count; }, 0);
+          var totalForks = repos.reduce(function (s, r) { return s + r.forks_count; }, 0);
+
+          statsBody.innerHTML =
+            '<div class="stat-grid">' +
+              '<div class="stat-item">' +
+                '<span class="stat-value">' + user.public_repos + '</span>' +
+                '<span class="stat-label">Repositories</span>' +
+              '</div>' +
+              '<div class="stat-item">' +
+                '<span class="stat-value">' + totalStars + '</span>' +
+                '<span class="stat-label">Total Stars</span>' +
+              '</div>' +
+              '<div class="stat-item">' +
+                '<span class="stat-value">' + totalForks + '</span>' +
+                '<span class="stat-label">Total Forks</span>' +
+              '</div>' +
+              '<div class="stat-item">' +
+                '<span class="stat-value">' + user.followers + '</span>' +
+                '<span class="stat-label">Followers</span>' +
+              '</div>' +
+            '</div>';
+
+          // Language distribution = number of non-fork repos whose primary language is X
+          var langCounts = {};
+          repos.forEach(function (r) {
+            if (r.language && !r.fork) {
+              langCounts[r.language] = (langCounts[r.language] || 0) + 1;
+            }
+          });
+
+          var entries = Object.keys(langCounts).map(function (k) {
+            return [k, langCounts[k]];
+          });
+          entries.sort(function (a, b) { return b[1] - a[1]; });
+          entries = entries.slice(0, 6);
+
+          var total = entries.reduce(function (s, e) { return s + e[1]; }, 0);
+
+          if (entries.length === 0) {
+            langsBody.innerHTML = '<p class="stat-error">No language data available</p>';
+            return;
+          }
+
+          langsBody.innerHTML = entries.map(function (entry, i) {
+            var lang  = entry[0];
+            var count = entry[1];
+            var pct   = ((count / total) * 100).toFixed(1);
+            var color = colorFor(lang, i);
+            return (
+              '<div class="lang-bar-container">' +
+                '<div class="lang-bar-header">' +
+                  '<span class="lang-bar-name">' + lang + '</span>' +
+                  '<span class="lang-bar-pct">' + pct + '%</span>' +
+                '</div>' +
+                '<div class="lang-bar-track">' +
+                  '<div class="lang-bar-fill" style="width:' + pct + '%;background:' + color + '"></div>' +
+                '</div>' +
+              '</div>'
+            );
+          }).join('');
+        }).catch(function () {
+          statsBody.innerHTML = '<p class="stat-error">Stats currently unavailable</p>';
+          langsBody.innerHTML = '<p class="stat-error">Language data currently unavailable</p>';
+        });
+      }
+
+      loadStats();
+    })();
+  </script>
 
   <!-- ╔══════════════════════════════════╗ -->
   <!--  SCRIPT — scroll reveal            -->
