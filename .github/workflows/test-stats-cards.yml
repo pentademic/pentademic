@@ -15,14 +15,14 @@ concurrency:
 
 jobs:
   generate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - name: Generate cards from public GitHub data
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9.0.0
         with:
           script: |
             await require('./scripts/generate-stats.cjs')({github, context});
@@ -37,7 +37,7 @@ jobs:
           PY
       - name: Publish cards to stats branch
         if: github.event_name != 'pull_request'
-        uses: crazy-max/ghaction-github-pages@v4
+        uses: crazy-max/ghaction-github-pages@v5.0.0
         with:
           target_branch: stats
           build_dir: dist-stats
