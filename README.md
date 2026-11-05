@@ -13,8 +13,8 @@
 
 ## 🧠 About Me
 
-- 🎓 Final-year **MSc Engineering** student at [École Centrale Méditerranée](https://www.centrale-med.fr/) (France)
-- 💼 **Backend & IoT Apprentice** at **Locacoeur** (MedTech) — building critical SaaS & MQTT telemetry for connected cardiac devices
+- 🎓 **Engineering graduate** from [École Centrale Méditerranée](https://www.centrale-med.fr/) (France) — engineering degree awarded in **October 2026**
+- 💼 **Backend & IoT apprenticeship** at **Locacoeur** (MedTech) — contributed to SaaS services & MQTT telemetry for connected cardiac devices
 - 🦾 Passionate about bridging **low-level hardware** with **reliable cloud infrastructure**
 - 🚀 Ultimate goal: apply **Control Theory + Edge AI + Secure Telemetry** to Neuromusculoskeletal Biomechanics — building next-gen **active exoskeletons & bionic prostheses**
 - 🔒 My production work at Locacoeur is strictly closed-source and confidential
@@ -73,7 +73,7 @@
 
 ## 🚀 Highlighted Projects
 
-> 🔒 *My daily work on critical MedTech SaaS & MQTT infrastructure at Locacoeur is strictly closed-source and confidential. The projects below are selected academic & engineering highlights.*
+> 🔒 *My work on MedTech SaaS & MQTT infrastructure during my apprenticeship at Locacoeur is strictly closed-source and confidential. The projects below are selected academic & engineering highlights.*
 
 ### 🐟 F.I.S.H. D.R.O.N.E. & Edge AI Architecture
 *Autonomous maritime surveillance drone — STM32H7*
@@ -112,6 +112,8 @@
 ---
 
 ## 📫 Let's Connect
+
+For embedded systems, IoT or robotics projects and opportunities in France or internationally, contact me to discuss the scope and timeline. Availability to be agreed based on the project.
 
 <div align="center">
 
