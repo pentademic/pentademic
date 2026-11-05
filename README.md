@@ -65,7 +65,8 @@
 
 <div align="center">
 
-[![GitHub Streak](https://streak-stats.demolab.com?user=pentademic&theme=tokyonight&hide_border=true&date_format=j%20M%5B%20Y%5D)](https://git.io/streak-stats)
+[![GitHub Stats](https://raw.githubusercontent.com/pentademic/pentademic/stats/github-stats.svg)](https://github.com/pentademic)
+[![Primary languages by repository count](https://raw.githubusercontent.com/pentademic/pentademic/stats/top-languages.svg)](https://github.com/pentademic?tab=repositories)
 
 </div>
 

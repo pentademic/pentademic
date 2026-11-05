@@ -1,84 +1,45 @@
-name: Verify Stats Cards
+name: Generate GitHub Stats Cards
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+    branches: [main]
   schedule:
-    # Runs daily at 08:00 UTC to catch any prolonged outages
     - cron: "0 8 * * *"
   workflow_dispatch:
 
+concurrency:
+  group: stats-cards-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  verify:
-    name: Verify GitHub stats card URLs
+  generate:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    permissions: {}
-
+    permissions:
+      contents: write
     steps:
-      - name: Check GitHub API (stats cards data source)
+      - uses: actions/checkout@v4
+      - name: Generate cards from public GitHub data
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await require('./scripts/generate-stats.cjs')({github, context});
+      - name: Validate generated SVGs
         run: |
-          # The two stats cards now call the GitHub REST API directly.
-          # Verify the user endpoint returns a 200 with valid JSON.
-          for attempt in 1 2 3; do
-            HTTP_CODE=$(curl -s -o /tmp/gh-user.json -w "%{http_code}" \
-              "https://api.github.com/users/pentademic")
-            echo "GitHub API HTTP status (attempt $attempt): $HTTP_CODE"
-            if [ "$HTTP_CODE" = "200" ]; then
-              if ! grep -q '"login"' /tmp/gh-user.json; then
-                echo "::error::GitHub API response does not contain expected user data"
-                cat /tmp/gh-user.json
-                exit 1
-              fi
-              echo "GitHub API OK"
-              break
-            elif [ "$HTTP_CODE" -ge 500 ] 2>/dev/null && [ "$attempt" -lt 3 ]; then
-              echo "::warning::GitHub API returned HTTP $HTTP_CODE (server error), retrying in 10 s…"
-              sleep 10
-            else
-              echo "::error::GitHub API returned HTTP $HTTP_CODE after $attempt attempt(s)"
-              exit 1
-            fi
-          done
-
-      - name: Check streak stats
-        run: |
-          # Streak is an optional external badge. Keep outages visible without
-          # treating provider downtime as a regression in this repository.
-          for attempt in 1 2 3; do
-            HTTP_CODE="000"
-            if HTTP_CODE=$(curl -sS -L --connect-timeout 5 --max-time 15 \
-              -o /tmp/streak.svg -w "%{http_code}" \
-              "https://streak-stats.demolab.com?user=pentademic&theme=tokyonight&hide_border=true&date_format=j%20M%5B%20Y%5D"); then
-              CURL_EXIT=0
-            else
-              CURL_EXIT=$?
-            fi
-            echo "Streak stats HTTP status (attempt $attempt): $HTTP_CODE"
-            if [ "$CURL_EXIT" -eq 0 ] && [ "$HTTP_CODE" = "200" ]; then
-              if ! grep -qi '<svg[[:space:]>]' /tmp/streak.svg; then
-                echo "::error::Streak stats returned HTTP 200 without an SVG"
-                exit 1
-              fi
-              echo "Streak stats OK"
-              exit 0
-            fi
-            if [ "$CURL_EXIT" -ne 0 ] || [ "$HTTP_CODE" = "429" ] || [[ "$HTTP_CODE" =~ ^5[0-9][0-9]$ ]]; then
-              if [ "$attempt" -lt 3 ]; then
-                echo "::warning::Streak provider unavailable (HTTP $HTTP_CODE, curl $CURL_EXIT); retrying in 5 s"
-                sleep 5
-              else
-                echo "::warning::Optional Streak badge unavailable after 3 attempts (HTTP $HTTP_CODE, curl $CURL_EXIT)"
-                echo "### Optional Streak badge unavailable" >> "$GITHUB_STEP_SUMMARY"
-                echo "Provider returned HTTP $HTTP_CODE (curl exit $CURL_EXIT) after 3 attempts. Profile content checks are unaffected." >> "$GITHUB_STEP_SUMMARY"
-                exit 0
-              fi
-            else
-              echo "::error::Streak stats returned unexpected HTTP $HTTP_CODE"
-              exit 1
-            fi
-          done
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          for name in ['github-stats.svg', 'top-languages.svg']:
+              root = ET.parse('dist-stats/' + name).getroot()
+              assert root.tag == '{http://www.w3.org/2000/svg}svg'
+              assert len(root.findall('.//{http://www.w3.org/2000/svg}text')) >= 3
+          PY
+      - name: Publish cards to stats branch
+        if: github.event_name != 'pull_request'
+        uses: crazy-max/ghaction-github-pages@v4
+        with:
+          target_branch: stats
+          build_dir: dist-stats
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
